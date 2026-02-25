@@ -38,9 +38,9 @@ public class LoginActivity extends AppCompatActivity {
 
         btnLogin.setOnClickListener(v -> attemptLogin());
 
-        // We'll enable these after we create those screens
+        // Screens
          tvGoRegister.setOnClickListener(v -> startActivity(new Intent(this, SignUpActivity.class)));
-        // tvForgot.setOnClickListener(v -> startActivity(new Intent(this, ForgotPasswordActivity.class)));
+         tvForgot.setOnClickListener(v -> startActivity(new Intent(this, ForgotPasswordActivity.class)));
     }
 
     private void attemptLogin() {
