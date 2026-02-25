@@ -1,5 +1,6 @@
 package com.example.studybest;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -38,7 +39,7 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin.setOnClickListener(v -> attemptLogin());
 
         // We'll enable these after we create those screens
-        // tvGoRegister.setOnClickListener(v -> startActivity(new Intent(this, SignUpActivity.class)));
+         tvGoRegister.setOnClickListener(v -> startActivity(new Intent(this, SignUpActivity.class)));
         // tvForgot.setOnClickListener(v -> startActivity(new Intent(this, ForgotPasswordActivity.class)));
     }
 
@@ -60,16 +61,20 @@ public class LoginActivity extends AppCompatActivity {
 
         setLoading(true);
 
+        setLoading(true);
+
         auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
-                    setLoading(false);
+                    setLoading(false); // ✅ ALWAYS stop loading here
+
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "Login success ✅", Toast.LENGTH_LONG).show();
-                        // Next step: go HomeActivity (after we create it)
+                        // next step: go home (we will add HomeActivity soon)
                     } else {
-                        Toast.makeText(this,
-                                task.getException() != null ? task.getException().getMessage() : "Login failed",
-                                Toast.LENGTH_LONG).show();
+                        String msg = (task.getException() != null)
+                                ? task.getException().getMessage()
+                                : "Login failed";
+                        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
                     }
                 });
     }
