@@ -69,7 +69,13 @@ public class LoginActivity extends AppCompatActivity {
 
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "Login success ✅", Toast.LENGTH_LONG).show();
-                        // next step: go home (we will add HomeActivity soon)
+                        //  direct to  HomeActivity
+
+
+                            startActivity(new Intent(LoginActivity.this, HomeActivity.class));
+                            finish();
+
+
                     } else {
                         String msg = (task.getException() != null)
                                 ? task.getException().getMessage()
