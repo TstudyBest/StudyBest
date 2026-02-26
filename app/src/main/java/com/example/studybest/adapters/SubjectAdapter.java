@@ -17,6 +17,8 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
 
     private final List<Subject> items;
 
+    private OnSubjectLongClickListener longClickListener;
+
     public SubjectAdapter(List<Subject> items) {
         this.items = items;
     }
@@ -29,9 +31,19 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
         return new VH(v);
     }
 
+
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.tv.setText(items.get(position).getName());
+        Subject subject = items.get(position);
+
+        holder.tv.setText(subject.getName());
+
+        holder.itemView.setOnLongClickListener(v -> {
+            if (longClickListener != null) {
+                longClickListener.onLongClick(subject);
+            }
+            return true;
+        });
     }
 
     @Override
@@ -46,4 +58,16 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
             tv = itemView.findViewById(R.id.tvSubjectName);
         }
     }
+
+    public interface OnSubjectLongClickListener {
+        void onLongClick(Subject subject);
+
+    }
+
+    public void setOnSubjectLongClickListener(OnSubjectLongClickListener listener) {
+        this.longClickListener = listener;
+    }
+
+
+
 }

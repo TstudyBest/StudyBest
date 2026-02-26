@@ -45,6 +45,8 @@ public class SubjectsFragment extends Fragment {
         adapter = new SubjectAdapter(list);
         rvSubjects.setAdapter(adapter);
 
+        adapter.setOnSubjectLongClickListener(subject -> confirmDelete(subject));
+
          db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
@@ -90,6 +92,26 @@ public class SubjectsFragment extends Fragment {
 
                     adapter.notifyDataSetChanged();
                 });
+    }
+
+    private void confirmDelete(Subject subject) {
+        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        if (uid == null) return;
+
+        new android.app.AlertDialog.Builder(getContext())
+                .setTitle("Delete Subject")
+                .setMessage("Delete \"" + subject.getName() + "\"?")
+                .setPositiveButton("Delete", (d, w) -> {
+                    db.collection("users")
+                            .document(uid)
+                            .collection("subjects")
+                            .document(subject.getId())
+                            .delete()
+                            .addOnSuccessListener(v -> Toast.makeText(getContext(), "Deleted", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e -> Toast.makeText(getContext(), "Delete failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void showAddSubjectDialog() {
