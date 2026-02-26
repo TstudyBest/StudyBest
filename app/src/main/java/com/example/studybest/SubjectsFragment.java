@@ -66,21 +66,30 @@ public class SubjectsFragment extends Fragment {
             return;
         }
 
-        // Per-user subjects path:
-        db.collection("users").document(uid).collection("subjects")
-                .get()
-                .addOnSuccessListener(query -> {
+        db.collection("users")
+                .document(uid)
+                .collection("subjects")
+                .addSnapshotListener((query, error) -> {
+
+                    if (error != null) {
+                        Toast.makeText(getContext(), "Listen failed: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    if (query == null) return;
+
                     list.clear();
+
                     for (com.google.firebase.firestore.DocumentSnapshot doc : query.getDocuments()) {
                         String id = doc.getId();
                         String name = doc.getString("name");
-                        if (name != null) list.add(new Subject(id, name));
+                        if (name != null) {
+                            list.add(new Subject(id, name));
+                        }
                     }
+
                     adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Load failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
+                });
     }
 
     private void showAddSubjectDialog() {
