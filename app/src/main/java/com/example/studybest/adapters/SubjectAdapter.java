@@ -17,7 +17,14 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
 
     private final List<Subject> items;
 
+    public interface OnSubjectClickListener { void onClick(Subject subject); }
+    public interface OnSubjectLongClickListener { void onLongClick(Subject subject); }
+
+    private OnSubjectClickListener clickListener;
     private OnSubjectLongClickListener longClickListener;
+
+    public void setOnSubjectClickListener(OnSubjectClickListener l) { clickListener = l; }
+    public void setOnSubjectLongClickListener(OnSubjectLongClickListener l) { longClickListener = l; }
 
     public SubjectAdapter(List<Subject> items) {
         this.items = items;
@@ -31,11 +38,9 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
         return new VH(v);
     }
 
-
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
         Subject subject = items.get(position);
-
         holder.tv.setText(subject.getName());
 
         holder.itemView.setOnClickListener(v -> {
@@ -43,9 +48,7 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
         });
 
         holder.itemView.setOnLongClickListener(v -> {
-            if (longClickListener != null) {
-                longClickListener.onLongClick(subject);
-            }
+            if (longClickListener != null) longClickListener.onLongClick(subject);
             return true;
         });
     }
@@ -62,28 +65,4 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
             tv = itemView.findViewById(R.id.tvSubjectName);
         }
     }
-
-    public interface OnSubjectLongClickListener {
-        void onLongClick(Subject subject);
-
-    }
-
-    public void setOnSubjectLongClickListener(OnSubjectLongClickListener listener) {
-        this.longClickListener = listener;
-    }
-
-
-    public interface OnSubjectClickListener {
-        void onClick(Subject subject);
-    }
-
-
-
-    private OnSubjectClickListener clickListener;
-
-    public void setOnSubjectClickListener(OnSubjectClickListener listener) {
-        this.clickListener = listener;
-    }
-
-
 }

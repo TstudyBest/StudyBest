@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+
 import android.app.AlertDialog;
 import android.widget.EditText;
 
@@ -45,9 +46,8 @@ public class SubjectsFragment extends Fragment {
         adapter = new SubjectAdapter(list);
         rvSubjects.setAdapter(adapter);
 
-        adapter.setOnSubjectLongClickListener(subject -> confirmDelete(subject));
-
-        adapter.setOnSubjectClickListener(subject -> showEditSubjectDialog(subject));
+        adapter.setOnSubjectClickListener(subject -> openSubject(subject));
+        adapter.setOnSubjectLongClickListener(subject -> showSubjectMenu(subject));
 
          db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
@@ -146,6 +146,29 @@ public class SubjectsFragment extends Fragment {
                             .addOnFailureListener(e -> Toast.makeText(getContext(), "Update failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 })
                 .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+
+    private void openSubject(Subject subject) {
+        android.content.Intent i = new android.content.Intent(getContext(), SubjectTasksActivity.class);
+        i.putExtra("subjectId", subject.getId());
+        i.putExtra("subjectName", subject.getName());
+        startActivity(i);
+    }
+
+    private void showSubjectMenu(Subject subject) {
+        String[] options = {"Edit", "Delete"};
+
+        new android.app.AlertDialog.Builder(getContext())
+                .setTitle(subject.getName())
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        showEditSubjectDialog(subject);
+                    } else {
+                        confirmDelete(subject);
+                    }
+                })
                 .show();
     }
 
