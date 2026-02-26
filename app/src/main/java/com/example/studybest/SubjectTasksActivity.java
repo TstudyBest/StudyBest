@@ -55,6 +55,20 @@ public class SubjectTasksActivity extends AppCompatActivity {
         adapter = new TaskAdapter(list);
         rv.setAdapter(adapter);
 
+        adapter.setOnTaskCheckedListener((task, isChecked) -> {
+
+            String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+            if (uid == null) return;
+
+            db.collection("users")
+                    .document(uid)
+                    .collection("subjects")
+                    .document(subjectId)
+                    .collection("tasks")
+                    .document(task.getId())
+                    .update("done", isChecked);
+        });
+
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
