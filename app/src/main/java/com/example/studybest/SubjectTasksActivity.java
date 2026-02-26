@@ -107,13 +107,24 @@ public class SubjectTasksActivity extends AppCompatActivity {
 
                     list.clear();
                     for (com.google.firebase.firestore.DocumentSnapshot doc : query.getDocuments()) {
+
                         String id = doc.getId();
                         String title = doc.getString("title");
                         Boolean done = doc.getBoolean("done");
 
-                        Long remindAt = doc.getLong("remindAt"); // ✅ add this (safe read)
 
-                        list.add(new Task(id, title == null ? "" : title, done != null && done));
+                        Long remindAtLong = doc.getLong("remindAt");
+                        long remindAt = (remindAtLong != null) ? remindAtLong : 0L;
+
+                        list.add(new Task(
+                                id,
+                                title == null ? "" : title,
+                                done != null && done,
+                                remindAt
+                        ));
+
+
+
                     }
                     adapter.notifyDataSetChanged();
                 });
@@ -189,6 +200,6 @@ public class SubjectTasksActivity extends AppCompatActivity {
                 .show();
     }
 
-    
+
 
 }
