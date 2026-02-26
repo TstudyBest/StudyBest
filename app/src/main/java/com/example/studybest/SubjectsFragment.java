@@ -6,6 +6,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import android.app.AlertDialog;
+import android.widget.EditText;
+
+import com.google.firebase.firestore.DocumentReference;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -40,13 +45,19 @@ public class SubjectsFragment extends Fragment {
         adapter = new SubjectAdapter(list);
         rvSubjects.setAdapter(adapter);
 
-        db = FirebaseFirestore.getInstance();
+         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
+
+        View fab = v.findViewById(R.id.fabAddSubject);
+        fab.setOnClickListener(view -> showAddSubjectDialog());
+
 
         loadSubjects();
 
         return v;
     }
+
+
 
     private void loadSubjects() {
         String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
@@ -71,4 +82,39 @@ public class SubjectsFragment extends Fragment {
                         Toast.makeText(getContext(), "Load failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
                 );
     }
+
+    private void showAddSubjectDialog() {
+        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        if (uid == null) {
+            Toast.makeText(getContext(), "Not logged in", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final EditText input = new EditText(getContext());
+        input.setHint("e.g., Physics");
+
+        new AlertDialog.Builder(getContext())
+                .setTitle("Add Subject")
+                .setView(input)
+                .setPositiveButton("Add", (dialog, which) -> {
+                    String name = input.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        Toast.makeText(getContext(), "Subject name required", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // Save to: users/{uid}/subjects/{autoId}
+                    DocumentReference ref = db.collection("users")
+                            .document(uid)
+                            .collection("subjects")
+                            .document(); // auto-id
+
+                    ref.set(new Subject(ref.getId(), name))
+                            .addOnSuccessListener(v -> Toast.makeText(getContext(), "Added", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e -> Toast.makeText(getContext(), "Add failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
 }
