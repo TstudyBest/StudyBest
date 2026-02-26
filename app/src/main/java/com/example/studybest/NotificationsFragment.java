@@ -1,64 +1,80 @@
 package com.example.studybest;
 
 import android.os.Bundle;
-
-import androidx.fragment.app.Fragment;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link NotificationsFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.studybest.adapters.AlertsAdapter;
+import com.example.studybest.models.ReminderItem;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.ArrayList;
+
 public class NotificationsFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    private RecyclerView rv;
+    private AlertsAdapter adapter;
+    private final ArrayList<ReminderItem> list = new ArrayList<>();
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private FirebaseFirestore db;
+    private FirebaseAuth auth;
 
-    public NotificationsFragment() {
-        // Required empty public constructor
-    }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment NotificationsFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static NotificationsFragment newInstance(String param1, String param2) {
-        NotificationsFragment fragment = new NotificationsFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
+    @Nullable
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View v = inflater.inflate(R.layout.fragment_notifications, container, false);
+
+        rv = v.findViewById(R.id.rvAlerts);
+        rv.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new AlertsAdapter(list);
+        rv.setAdapter(adapter);
+
+        db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
+
+        loadReminders();
+
+        return v;
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_notifications, container, false);
+    private void loadReminders() {
+        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        if (uid == null) return;
+
+        // We first load subjects, then for each subject load tasks where remindAt exists
+        db.collection("users").document(uid).collection("subjects")
+                .get()
+                .addOnSuccessListener(subjects -> {
+                    list.clear();
+
+                    for (var subjectDoc : subjects.getDocuments()) {
+                        String subjectName = subjectDoc.getString("name");
+                        String subjectId = subjectDoc.getId();
+
+                        db.collection("users").document(uid)
+                                .collection("subjects").document(subjectId)
+                                .collection("tasks")
+                                .whereGreaterThan("remindAt", 0)
+                                .get()
+                                .addOnSuccessListener(tasks -> {
+                                    for (var taskDoc : tasks.getDocuments()) {
+                                        String title = taskDoc.getString("title");
+                                        Long remindAt = taskDoc.getLong("remindAt");
+                                        if (title != null && remindAt != null && subjectName != null) {
+                                            list.add(new ReminderItem(subjectName, title, remindAt));
+                                        }
+                                    }
+                                    adapter.notifyDataSetChanged();
+                                });
+                    }
+                });
     }
 }

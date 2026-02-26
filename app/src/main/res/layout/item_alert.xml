@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tvAlertTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Subject — Task"
+        android:textStyle="bold"
+        android:textSize="16sp"/>
+
+    <TextView
+        android:id="@+id/tvAlertTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Reminder time"
+        android:textSize="13sp"/>
+</LinearLayout>
