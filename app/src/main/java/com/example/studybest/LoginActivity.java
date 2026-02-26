@@ -68,10 +68,11 @@ public class LoginActivity extends AppCompatActivity {
                     setLoading(false); // ✅ ALWAYS stop loading here
 
                     if (task.isSuccessful()) {
-                        Toast.makeText(this, "Login success ✅", Toast.LENGTH_LONG).show();
+
+
+                       //  Toast.makeText(this, "Login success ✅", Toast.LENGTH_LONG).show();
+
                         //  direct to  HomeActivity
-
-
                             startActivity(new Intent(LoginActivity.this, HomeActivity.class));
                             finish();
 

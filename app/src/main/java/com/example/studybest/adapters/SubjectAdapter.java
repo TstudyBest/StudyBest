@@ -38,6 +38,10 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
 
         holder.tv.setText(subject.getName());
 
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) clickListener.onClick(subject);
+        });
+
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null) {
                 longClickListener.onLongClick(subject);
@@ -68,6 +72,18 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.VH> {
         this.longClickListener = listener;
     }
 
+
+    public interface OnSubjectClickListener {
+        void onClick(Subject subject);
+    }
+
+
+
+    private OnSubjectClickListener clickListener;
+
+    public void setOnSubjectClickListener(OnSubjectClickListener listener) {
+        this.clickListener = listener;
+    }
 
 
 }

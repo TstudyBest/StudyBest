@@ -47,6 +47,8 @@ public class SubjectsFragment extends Fragment {
 
         adapter.setOnSubjectLongClickListener(subject -> confirmDelete(subject));
 
+        adapter.setOnSubjectClickListener(subject -> showEditSubjectDialog(subject));
+
          db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
@@ -109,6 +111,39 @@ public class SubjectsFragment extends Fragment {
                             .delete()
                             .addOnSuccessListener(v -> Toast.makeText(getContext(), "Deleted", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(e -> Toast.makeText(getContext(), "Delete failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showEditSubjectDialog(Subject subject) {
+        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        if (uid == null) {
+            Toast.makeText(getContext(), "Not logged in", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final android.widget.EditText input = new android.widget.EditText(getContext());
+        input.setText(subject.getName());
+        input.setSelection(input.getText().length()); // cursor at end
+
+        new android.app.AlertDialog.Builder(getContext())
+                .setTitle("Edit Subject")
+                .setView(input)
+                .setPositiveButton("Update", (dialog, which) -> {
+                    String newName = input.getText().toString().trim();
+                    if (newName.isEmpty()) {
+                        Toast.makeText(getContext(), "Name cannot be empty", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    db.collection("users")
+                            .document(uid)
+                            .collection("subjects")
+                            .document(subject.getId())
+                            .update("name", newName)
+                            .addOnSuccessListener(v -> Toast.makeText(getContext(), "Updated", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e -> Toast.makeText(getContext(), "Update failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
