@@ -5,6 +5,13 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class HomeActivity extends AppCompatActivity {
@@ -15,6 +22,8 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+
+        askNotificationPermissionIfNeeded();
 
         bottomNav = findViewById(R.id.bottomNav);
 
@@ -38,6 +47,22 @@ public class HomeActivity extends AppCompatActivity {
 
             return loadFragment(selectedFragment);
         });
+
+        createNotificationChannel();
+
+    }
+
+    private void askNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        1001
+                );
+            }
+        }
     }
 
     private boolean loadFragment(Fragment fragment) {
@@ -50,4 +75,20 @@ public class HomeActivity extends AppCompatActivity {
 
         return true;
     }
+
+    private void createNotificationChannel() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            android.app.NotificationChannel channel =
+                    new android.app.NotificationChannel(
+                            "studybest_reminders",
+                            "StudyBest Reminders",
+                            android.app.NotificationManager.IMPORTANCE_HIGH
+                    );
+            channel.setDescription("Task reminder notifications");
+
+            android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
+            nm.createNotificationChannel(channel);
+        }
+    }
+
 }
