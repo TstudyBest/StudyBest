@@ -1,0 +1,6 @@
+<resources>
+    <string-array name="subject_sort_options">
+        <item>A → Z</item>
+        <item>Z → A</item>
+    </string-array>
+</resources>

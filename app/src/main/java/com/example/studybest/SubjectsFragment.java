@@ -34,10 +34,26 @@ public class SubjectsFragment extends Fragment {
     private FirebaseFirestore db;
     private FirebaseAuth auth;
 
+    private android.widget.EditText etSubjectSearch;
+    private android.widget.Spinner spSort;
+
+    private final ArrayList<Subject> allSubjects = new ArrayList<>();
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_subjects, container, false);
+
+        etSubjectSearch = v.findViewById(R.id.etSubjectSearch);
+        spSort = v.findViewById(R.id.spSort);
+
+        android.widget.ArrayAdapter<String> sortAdapter =
+                new android.widget.ArrayAdapter<>(
+                        getContext(),
+                        android.R.layout.simple_spinner_dropdown_item,
+                        getResources().getStringArray(R.array.subject_sort_options)
+                );
+        spSort.setAdapter(sortAdapter);
 
         rvSubjects = v.findViewById(R.id.rvSubjects);
         rvSubjects.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -57,6 +73,25 @@ public class SubjectsFragment extends Fragment {
 
 
         loadSubjects();
+
+
+        // ✅ add hooks here (before return)
+        // Hook search + spinner change
+
+        etSubjectSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { applySubjectFilter(); }
+            @Override public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        spSort.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                applySubjectFilter();
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+
+        ///
 
         return v;
     }
@@ -82,17 +117,28 @@ public class SubjectsFragment extends Fragment {
 
                     if (query == null) return;
 
-                    list.clear();
+//                    list.clear();
+//
+//                    for (com.google.firebase.firestore.DocumentSnapshot doc : query.getDocuments()) {
+//                        String id = doc.getId();
+//                        String name = doc.getString("name");
+//                        if (name != null) {
+//                            list.add(new Subject(id, name));
+//                        }
+//                    }
+//
+//                    adapter.notifyDataSetChanged();
+
+                    allSubjects.clear();
 
                     for (com.google.firebase.firestore.DocumentSnapshot doc : query.getDocuments()) {
                         String id = doc.getId();
                         String name = doc.getString("name");
-                        if (name != null) {
-                            list.add(new Subject(id, name));
-                        }
+                        if (name != null) allSubjects.add(new Subject(id, name));
                     }
 
-                    adapter.notifyDataSetChanged();
+                    applySubjectFilter();
+
                 });
     }
 
@@ -204,6 +250,28 @@ public class SubjectsFragment extends Fragment {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void applySubjectFilter() {
+        String search = etSubjectSearch.getText().toString().toLowerCase().trim();
+        int sortPos = spSort.getSelectedItemPosition(); // 0=A-Z, 1=Z-A
+
+        list.clear();
+
+        for (Subject s : allSubjects) {
+            String name = s.getName() != null ? s.getName().toLowerCase() : "";
+            if (search.isEmpty() || name.contains(search)) {
+                list.add(s);
+            }
+        }
+
+        java.util.Collections.sort(list, (a, b) -> {
+            String an = a.getName() == null ? "" : a.getName();
+            String bn = b.getName() == null ? "" : b.getName();
+            return sortPos == 0 ? an.compareToIgnoreCase(bn) : bn.compareToIgnoreCase(an);
+        });
+
+        adapter.notifyDataSetChanged();
     }
 
 }
