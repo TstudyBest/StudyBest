@@ -176,6 +176,7 @@ public class SubjectTasksActivity extends AppCompatActivity {
                     java.util.HashMap<String, Object> data = new java.util.HashMap<>();
                     data.put("title", finalTaskTitle);
                     data.put("done", false);
+                    data.put("ownerUid", uid);
                     if (finalRemindAt > 0) data.put("remindAt", finalRemindAt);
 
                     ref.set(data)
