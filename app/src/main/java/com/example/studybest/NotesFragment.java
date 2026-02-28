@@ -3,6 +3,7 @@ package com.example.studybest;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,9 +21,11 @@ import com.example.studybest.adapters.NoteAdapter;
 import com.example.studybest.models.Note;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class NotesFragment extends Fragment {
 
@@ -68,12 +71,20 @@ public class NotesFragment extends Fragment {
         return v;
     }
 
+    private String getUid() {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) return null;
+        String uid = user.getUid();
+        return (uid != null && !uid.isEmpty()) ? uid : null;
+    }
+
     private void listenNotes() {
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        String uid = getUid();
         if (uid == null) return;
 
         db.collection("users").document(uid).collection("notes")
                 .addSnapshotListener((q, e) -> {
+                    if (!isAdded()) return;
                     if (e != null || q == null) return;
 
                     all.clear();
@@ -81,13 +92,19 @@ public class NotesFragment extends Fragment {
                         String id = doc.getId();
                         String title = doc.getString("title");
                         String content = doc.getString("content");
-                        all.add(new Note(id, title == null ? "" : title, content == null ? "" : content));
+                        all.add(new Note(
+                                id,
+                                title != null ? title : "",
+                                content != null ? content : ""
+                        ));
                     }
                     applyFilter(etSearch.getText().toString());
                 });
     }
 
     private void applyFilter(String text) {
+        if (!isAdded()) return;
+
         String t = text == null ? "" : text.toLowerCase().trim();
         shown.clear();
 
@@ -99,7 +116,7 @@ public class NotesFragment extends Fragment {
     }
 
     private void showAddNoteDialog() {
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        String uid = getUid();
         if (uid == null) return;
 
         View form = LayoutInflater.from(getContext()).inflate(R.layout.dialog_note, null);
@@ -107,29 +124,42 @@ public class NotesFragment extends Fragment {
         EditText etContent = form.findViewById(R.id.etNoteContent);
 
         new AlertDialog.Builder(getContext())
-                .setTitle("Add Note")
+                .setTitle("New Note")
                 .setView(form)
                 .setPositiveButton("Save", (d, w) -> {
                     String title = etTitle.getText().toString().trim();
                     String content = etContent.getText().toString().trim();
-                    if (title.isEmpty() && content.isEmpty()) {
-                        Toast.makeText(getContext(), "Write something", Toast.LENGTH_SHORT).show();
+
+                    if (TextUtils.isEmpty(title) && TextUtils.isEmpty(content)) {
+                        Toast.makeText(getContext(), "Please write something before saving", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // cap the content length so it doesn't go crazy
+                    if (content.length() > 5000) {
+                        Toast.makeText(getContext(), "Note content is too long (max 5000 chars)", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
                     var ref = db.collection("users").document(uid).collection("notes").document();
-                    java.util.HashMap<String, Object> data = new java.util.HashMap<>();
+                    HashMap<String, Object> data = new HashMap<>();
                     data.put("title", title.isEmpty() ? "Untitled" : title);
                     data.put("content", content);
                     data.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-                    ref.set(data);
+
+                    ref.set(data)
+                            .addOnFailureListener(e -> {
+                                if (isAdded()) Toast.makeText(getContext(), "Failed to save note", Toast.LENGTH_SHORT).show();
+                            });
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
     private void showEditNoteDialog(Note note) {
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        if (note == null || note.getId() == null) return;
+
+        String uid = getUid();
         if (uid == null) return;
 
         View form = LayoutInflater.from(getContext()).inflate(R.layout.dialog_note, null);
@@ -146,26 +176,41 @@ public class NotesFragment extends Fragment {
                     String title = etTitle.getText().toString().trim();
                     String content = etContent.getText().toString().trim();
 
+                    if (content.length() > 5000) {
+                        Toast.makeText(getContext(), "Note content is too long", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
                     db.collection("users").document(uid).collection("notes")
                             .document(note.getId())
-                            .update("title", title.isEmpty() ? "Untitled" : title,
-                                    "content", content);
+                            .update(
+                                    "title", title.isEmpty() ? "Untitled" : title,
+                                    "content", content
+                            )
+                            .addOnFailureListener(e -> {
+                                if (isAdded()) Toast.makeText(getContext(), "Failed to update note", Toast.LENGTH_SHORT).show();
+                            });
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
     private void confirmDeleteNote(Note note) {
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+        if (note == null || note.getId() == null) return;
+
+        String uid = getUid();
         if (uid == null) return;
 
         new AlertDialog.Builder(getContext())
                 .setTitle("Delete Note")
-                .setMessage("Delete \"" + note.getTitle() + "\"?")
+                .setMessage("Delete \"" + note.getTitle() + "\"? This cannot be undone.")
                 .setPositiveButton("Delete", (d, w) -> {
                     db.collection("users").document(uid).collection("notes")
                             .document(note.getId())
-                            .delete();
+                            .delete()
+                            .addOnFailureListener(e -> {
+                                if (isAdded()) Toast.makeText(getContext(), "Failed to delete note", Toast.LENGTH_SHORT).show();
+                            });
                 })
                 .setNegativeButton("Cancel", null)
                 .show();

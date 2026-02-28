@@ -1,7 +1,9 @@
 package com.example.studybest;
 
+import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
@@ -13,43 +15,70 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
 
 public class HomeActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNav;
+    private FirebaseAuth auth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
+        auth = FirebaseAuth.getInstance();
+
+        // if somehow user is not logged in, send them back
+        if (auth.getCurrentUser() == null) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+
         askNotificationPermissionIfNeeded();
+        createNotificationChannel();
 
         bottomNav = findViewById(R.id.bottomNav);
 
-        // Default screen = Home
         loadFragment(new HomeFragment());
         bottomNav.setSelectedItemId(R.id.nav_home);
 
         bottomNav.setOnItemSelectedListener(item -> {
-            Fragment selectedFragment = null;
+            Fragment selected = null;
 
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                selectedFragment = new HomeFragment();
+                selected = new HomeFragment();
             } else if (id == R.id.nav_subjects) {
-                selectedFragment = new SubjectsFragment();
+                selected = new SubjectsFragment();
             } else if (id == R.id.nav_notes) {
-                selectedFragment = new NotesFragment();
+                selected = new NotesFragment();
             } else if (id == R.id.nav_notifications) {
-                selectedFragment = new NotificationsFragment();
+                selected = new NotificationsFragment();
+            } else if (id == R.id.nav_signout) {
+                showSignOutDialog();
+                return true;
             }
 
-            return loadFragment(selectedFragment);
+            return loadFragment(selected);
         });
+    }
 
-        createNotificationChannel();
-
+    // shows a confirm dialog before signing out
+    private void showSignOutDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Sign Out")
+                .setMessage("Are you sure you want to sign out?")
+                .setPositiveButton("Sign Out", (d, w) -> {
+                    auth.signOut();
+                    Intent i = new Intent(this, LoginActivity.class);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(i);
+                    finish();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void askNotificationPermissionIfNeeded() {
@@ -77,7 +106,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void createNotificationChannel() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             android.app.NotificationChannel channel =
                     new android.app.NotificationChannel(
                             "studybest_reminders",
@@ -87,8 +116,9 @@ public class HomeActivity extends AppCompatActivity {
             channel.setDescription("Task reminder notifications");
 
             android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
-            nm.createNotificationChannel(channel);
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+            }
         }
     }
-
 }

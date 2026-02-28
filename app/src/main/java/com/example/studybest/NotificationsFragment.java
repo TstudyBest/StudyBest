@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.studybest.adapters.AlertsAdapter;
 import com.example.studybest.models.ReminderItem;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -46,18 +47,25 @@ public class NotificationsFragment extends Fragment {
     }
 
     private void loadReminders() {
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
-        if (uid == null) return;
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) return;
 
-        // We first load subjects, then for each subject load tasks where remindAt exists
+        String uid = user.getUid();
+        if (uid == null || uid.isEmpty()) return;
+
         db.collection("users").document(uid).collection("subjects")
                 .get()
                 .addOnSuccessListener(subjects -> {
+                    if (!isAdded()) return;
+
                     list.clear();
 
                     for (var subjectDoc : subjects.getDocuments()) {
                         String subjectName = subjectDoc.getString("name");
                         String subjectId = subjectDoc.getId();
+
+                        // skip if subject data is missing
+                        if (subjectName == null || subjectId == null) continue;
 
                         db.collection("users").document(uid)
                                 .collection("subjects").document(subjectId)
@@ -65,16 +73,26 @@ public class NotificationsFragment extends Fragment {
                                 .whereGreaterThan("remindAt", 0)
                                 .get()
                                 .addOnSuccessListener(tasks -> {
+                                    if (!isAdded()) return;
+
                                     for (var taskDoc : tasks.getDocuments()) {
                                         String title = taskDoc.getString("title");
                                         Long remindAt = taskDoc.getLong("remindAt");
-                                        if (title != null && remindAt != null && subjectName != null) {
+
+                                        // only add if all fields are present
+                                        if (title != null && !title.isEmpty() && remindAt != null && remindAt > 0) {
                                             list.add(new ReminderItem(subjectName, title, remindAt));
                                         }
                                     }
                                     adapter.notifyDataSetChanged();
+                                })
+                                .addOnFailureListener(e -> {
+                                    // silently skip subjects that fail to load tasks
                                 });
                     }
+                })
+                .addOnFailureListener(e -> {
+                    // don't crash if subjects fail to load
                 });
     }
 }

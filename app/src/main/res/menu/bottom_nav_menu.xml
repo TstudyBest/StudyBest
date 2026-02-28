@@ -21,4 +21,9 @@
         android:title="Alerts"
         android:icon="@android:drawable/ic_dialog_info" />
 
+    <item
+        android:id="@+id/nav_signout"
+        android:title="Sign Out"
+        android:icon="@android:drawable/ic_lock_power_off" />
+
 </menu>

@@ -1,22 +1,23 @@
 package com.example.studybest;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class HomeFragment extends Fragment {
 
-    private TextView tvSubjectsCount, tvTasksCount, tvPendingCount, tvRemindersCount;
+    private TextView tvSubjectsCount, tvTasksCount, tvPendingCount, tvRemindersCount, tvWelcome;
 
     private FirebaseFirestore db;
     private FirebaseAuth auth;
@@ -26,6 +27,7 @@ public class HomeFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_home, container, false);
 
+        tvWelcome = v.findViewById(R.id.tvWelcome);
         tvSubjectsCount = v.findViewById(R.id.tvSubjectsCount);
         tvTasksCount = v.findViewById(R.id.tvTasksCount);
         tvPendingCount = v.findViewById(R.id.tvPendingCount);
@@ -40,37 +42,83 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadCounts() {
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
-        if (uid == null) {
-            Toast.makeText(getContext(), "Not logged in", Toast.LENGTH_SHORT).show();
+        FirebaseUser user = auth.getCurrentUser();
+
+        // fail fast if not logged in
+        if (user == null) {
+            redirectToLogin();
             return;
         }
 
-        // 1) Subjects count
+        String uid = user.getUid();
+
+        if (uid == null || uid.isEmpty()) {
+            redirectToLogin();
+            return;
+        }
+
+        // show welcome with email
+        String email = user.getEmail();
+        if (email != null && !email.isEmpty()) {
+            tvWelcome.setText("Welcome back, " + email.split("@")[0] + "!");
+        } else {
+            tvWelcome.setText("Welcome back!");
+        }
+
+        // subjects count
         db.collection("users")
                 .document(uid)
                 .collection("subjects")
                 .get()
-                .addOnSuccessListener(q -> tvSubjectsCount.setText("Subjects: " + q.size()));
+                .addOnSuccessListener(q -> {
+                    if (isAdded()) {
+                        tvSubjectsCount.setText(String.valueOf(q.size()));
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded()) tvSubjectsCount.setText("0");
+                });
 
-        // 2) All tasks across all subjects (collectionGroup)
+        // all tasks
         db.collectionGroup("tasks")
-                .whereEqualTo("ownerUid", uid)   // we will add this field in Step 2
+                .whereEqualTo("ownerUid", uid)
                 .get()
-                .addOnSuccessListener(q -> tvTasksCount.setText("Tasks: " + q.size()));
+                .addOnSuccessListener(q -> {
+                    if (isAdded()) tvTasksCount.setText(String.valueOf(q.size()));
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded()) tvTasksCount.setText("0");
+                });
 
-        // 3) Pending tasks
+        // pending tasks
         db.collectionGroup("tasks")
                 .whereEqualTo("ownerUid", uid)
                 .whereEqualTo("done", false)
                 .get()
-                .addOnSuccessListener(q -> tvPendingCount.setText("Pending: " + q.size()));
+                .addOnSuccessListener(q -> {
+                    if (isAdded()) tvPendingCount.setText(String.valueOf(q.size()));
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded()) tvPendingCount.setText("0");
+                });
 
-        // 4) Reminders count (tasks with remindAt)
+        // tasks with reminders
         db.collectionGroup("tasks")
                 .whereEqualTo("ownerUid", uid)
                 .whereGreaterThan("remindAt", 0)
                 .get()
-                .addOnSuccessListener(q -> tvRemindersCount.setText("Reminders: " + q.size()));
+                .addOnSuccessListener(q -> {
+                    if (isAdded()) tvRemindersCount.setText(String.valueOf(q.size()));
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded()) tvRemindersCount.setText("0");
+                });
+    }
+
+    private void redirectToLogin() {
+        if (isAdded() && getActivity() != null) {
+            startActivity(new Intent(getActivity(), LoginActivity.class));
+            getActivity().finish();
+        }
     }
 }
